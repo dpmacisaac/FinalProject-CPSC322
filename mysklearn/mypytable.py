@@ -492,6 +492,23 @@ class MyPyTable:
         new_table = MyPyTable(column_names=new_col, data=new_data)
         return new_table
 
+    def convert_row_to_binary(self, col_name, base_val="0"):
+        """Function to convert a row to binary based on if it does or does not have a value
+
+        args:
+            col_name: column to convert
+            base_val: base value. Convert every other value
+        """
+        data = self.data
+        col_idx = self.column_names.index(col_name)
+
+        for row in data:
+            if row[col_idx] == base_val:
+                row[col_idx] = 0
+            else:
+                row[col_idx] = 1
+        
+        self.data = data
 
 def main():
     """
