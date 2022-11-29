@@ -510,7 +510,7 @@ class MyPyTable:
         
         self.data = data
     
-    def combine_boolean_rows(self, col1_name, col2_name):
+    def combine_boolean_rows(self, col1_name, col2_name, true_val = True):
         '''
         args:
             col1_name, col2_name (str): name of the two cols that should
@@ -521,7 +521,7 @@ class MyPyTable:
         index1 = self.column_names.index(col1_name)
         index2 = self.column_names.index(col2_name)
         for row in self.data:
-            if row[index1] or row[index2]:
+            if row[index1]==true_val or row[index2]==true_val:
                 row[index1] = True
             else:
                 row[index1] = False
