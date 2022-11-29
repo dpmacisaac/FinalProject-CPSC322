@@ -509,6 +509,27 @@ class MyPyTable:
                 row[col_idx] = 1
         
         self.data = data
+    
+    def combine_boolean_rows(self, col1_name, col2_name):
+        '''
+        args:
+            col1_name, col2_name (str): name of the two cols that should
+                be merged
+        returns:
+            a new pytable!
+        '''
+        index1 = self.column_names.index(col1_name)
+        index2 = self.column_names.index(col2_name)
+        for row in self.data:
+            if row[index1] or row[index2]:
+                row[index1] = True
+            else:
+                row[index1] = False
+        cols_to_keep = []
+        for i in range(len(self.column_names)):
+            if i is not index2:
+                cols_to_keep.append(i)
+        return self.keep_only_these_cols(cols_to_keep)
 
 def main():
     """
