@@ -9,6 +9,21 @@ import numpy as np # use numpy's random number generation
 from tabulate import tabulate
 from mysklearn import myevaluation
 
+def print_stats(header, stats):
+    """Helper function to print classifier stats
+    args:
+        header: classifier name
+        stats: stats returned by get_classifier_stats   
+    """
+    print("====================================")
+    print(header)
+    print("====================================")
+    print("Accuracy: ", stats[0])
+    print("Error Rate: ", stats[1])
+    print("Precision: ", stats[2])
+    print("Recall: ", stats[3])
+    print("F1 Score: ", stats[4])
+
 ###############################################################################################
 # PA7 Functions
 ###############################################################################################

@@ -43,7 +43,10 @@ def binary_precision_score(y_true, y_pred, labels=None, pos_label=None):
     false_pos = 0
     pos_val = None
     if pos_label is None:
-        pos_val = labels[0]
+        if labels:
+            pos_val = labels[0]
+        else:
+            pos_val = "No Lable Given"
     else:
         pos_val = pos_label
     for i in range(len(y_true)):
@@ -83,7 +86,10 @@ def binary_recall_score(y_true, y_pred, labels=None, pos_label=None):
     false_neg = 0
     pos_val = None
     if pos_label is None:
-        pos_val = labels[0]
+        if labels:
+            pos_val = labels[0]
+        else:
+            pos_val = "No Lable Given"
     else:
         pos_val = pos_label
     for i in range(len(y_true)):
