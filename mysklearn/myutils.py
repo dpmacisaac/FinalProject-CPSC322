@@ -9,6 +9,44 @@ import numpy as np # use numpy's random number generation
 from tabulate import tabulate
 from mysklearn import myevaluation
 
+def get_classifier_stats(classifier, X, y, k, dummy=False):
+    """
+    
+    """
+    avgs = []
+    precs = []
+    recalls = []
+    f1s = []
+
+    folds = myevaluation.stratified_kfold_split(X, y, k, shuffle=True)
+    
+    for i in range(k):
+        X_test = [X[_] for _ in folds[i][0]]
+        y_test = [y[_] for _ in folds[i][0]]
+
+        X_train = [X[_] for _ in folds[i][1]]
+        y_train = [y[_] for _ in folds[i][1]]
+
+        classifier.fit(X_train, y_train)
+
+        preds = classifier.predict(X_test)
+
+        if dummy:
+            preds = [classifier.predict(X)[0][0] for _ in range(len(X))]
+
+        avgs.append(myevaluation.accuracy_score(preds, y_test))
+        precs.append(myevaluation.binary_precision_score(y_test, preds))
+        recalls.append(myevaluation.binary_recall_score(y_test, preds))
+        f1s.append(myevaluation.binary_f1_score(y_test, preds))
+    
+    acc = round(sum(avgs) / len(avgs), 3)
+    er = round(1 - acc, 3)
+    prec = round(sum(precs) / len(precs), 3)
+    recall = round(sum(recalls) / len(recalls), 3)
+    f1 = round(sum(f1s) / len(f1s), 3)
+
+    return acc*100, er*100, prec*100, recall*100, f1*100
+
 def print_stats(header, stats):
     """Helper function to print classifier stats
     args:
