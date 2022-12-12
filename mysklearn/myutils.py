@@ -9,6 +9,17 @@ import numpy as np # use numpy's random number generation
 from tabulate import tabulate
 from mysklearn import myevaluation
 
+def print_header(header):
+    """Simple function to print each step nicely
+
+    args:
+        header    
+    """
+    print("====================================")
+    print(header)
+    print("====================================")
+
+
 def get_classifier_stats(classifier, X, y, k, dummy=False):
     """
     
