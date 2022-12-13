@@ -69,6 +69,7 @@ def bootstrap_sample(X, y=None, n_samples=None, random_state=None):
         return X_sample, X_out_of_bag, y_sample, y_out_of_bag
 
     else:
+        print("returning NONE")
         return X_sample, X_out_of_bag, None, None
 
 
