@@ -114,26 +114,6 @@ class MyDecisionTreeClassifier:
         rule_str = "IF "
         myutils.print_helper(self.tree, attribute_names, class_name, rule_str)
 
-    # BONUS method
-    def visualize_tree(self, dot_fname, pdf_fname, attribute_names=None):
-        """BONUS: Visualizes a tree via the open source Graphviz graph visualization package and
-        its DOT graph language (produces .dot and .pdf files).
-
-        Args:
-            dot_fname(str): The name of the .dot output file.
-            pdf_fname(str): The name of the .pdf output file generated from the .dot file.
-            attribute_names(list of str or None): A list of attribute names to use in the decision rules
-                (None if a list is not provided and the default attribute names based on indexes
-                (e.g. "att0", "att1", ...) should be used).
-
-        Notes:
-            Graphviz: https://graphviz.org/
-            DOT language: https://graphviz.org/doc/info/lang.html
-            You will need to install graphviz in the Docker container as shown in class to complete this method.
-        """
-        pass # TODO: (BONUS) fix this
-
-
 #######################################################################
 # PA2-6
 #######################################################################
@@ -795,7 +775,7 @@ class MyRandomForrestClassifier:
             curr_X, curr_X_test, curr_y, curr_y_test = myutils.bootstrap_sample(X_train, y_train)
 
             curr_X = [self.compute_random_subset(curr_X[i]) for i in range(len(curr_X))]
-
+            print(curr_X)
             curr_tree = MyDecisionTreeClassifier()
             curr_tree.fit(curr_X, curr_y)
             preds = curr_tree.predict(curr_X_test)
@@ -822,7 +802,8 @@ class MyRandomForrestClassifier:
         votes = []
         for tree in self.trees:
             votes.append(tree.predict([instance])[0])
-        print(votes)
+
+        #print(votes)
         return max(set(votes), key = votes.count)
 
     def predict(self, X_test):
