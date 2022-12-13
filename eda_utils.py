@@ -118,3 +118,22 @@ def get_column(table, header, col_name):
     for row in table:
         new_table.append(row[index])
     return new_table
+
+def generate_freq_chart(table, col_name, xl, yl, min_value=0):
+    """Function to make a frequency chart based on column in a table
+    
+    """
+    temp_dict = get_col_items_count(table, col_name)
+    temp_dict = {k:v for k, v in temp_dict.items() if v > min_value}
+    make_freq_chart_from_dict(temp_dict, xl, yl)
+
+def generate_scatter_plot(table, col_name, xl, yl, min_value=0):
+    """Function to create a scatter plot based on column name
+    
+    """
+    temp_dict = get_col_items_count(table, col_name)
+    temp_dict = {k:v for k, v in temp_dict.items() if v > min_value}
+    plt.scatter(temp_dict.keys(), temp_dict.values())
+    plt.xlabel(xl)
+    plt.ylabel(yl)
+    plt.show()
