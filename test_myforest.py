@@ -35,15 +35,16 @@ y_sol = ["False", "True", "True"]
 
 
 def test_myforest_fit():
-    N = 4
-    M = 2
-    F = 2
+    N = 20
+    M = 7
+    F = 3
     
     interview_forest = MyRandomForrestClassifier(N,M,F)
     interview_forest.fit(X,y)
     assert len(interview_forest.trees) == M
 
-    
+    preds = interview_forest.predict(X_test)
+    print(preds)
 
     assert False
 
