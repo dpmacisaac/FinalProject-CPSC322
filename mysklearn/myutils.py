@@ -9,6 +9,269 @@ import numpy as np # use numpy's random number generation
 from tabulate import tabulate
 from mysklearn import myevaluation
 
+import itertools
+
+def prepend_attribute_label(table, header):
+    '''
+    args:
+        table (list of list of objs)
+        header (list of str)
+
+    returns 
+        table (list of list of strs)
+
+    '''
+    for row in table:
+        for i in range(len(row)):
+            row[i] = header[i] + "=" + str(row[i])
+    return table
+
+def check_row_match(terms, row):
+    # return 1 if all the terms are in the row (match)
+    # return 0 otherwise
+    for term in terms:
+        if term not in row:
+            return 0
+    return 1
+
+def compute_rule_counts(rule, table):
+    Nleft = Nright = Nboth = 0
+    Ntotal = len(table)
+    for row in table:
+        Nleft += check_row_match(rule["lhs"], row)
+        Nright += check_row_match(rule["rhs"], row)
+        Nboth += check_row_match(rule["lhs"] + rule["rhs"], row)
+
+    return Nleft, Nright, Nboth, Ntotal
+
+def compute_rule_interestingness(rule, table):
+    Nleft, Nright, Nboth, Ntotal = compute_rule_counts(rule, table)
+    #print(Nleft, Nright, Nboth, Ntotal)
+    rule["confidence"] = Nboth / Nleft
+    rule["support"] = Nboth / Ntotal
+    rule["completeness"] = Nboth / Nright
+
+# set: an unordered collection with no duplicates
+# there is a built in set type
+# note: duplicate is gone and order is lost
+# note: there is a part of apriori that requires order
+
+# A union B: the set of all items in A or B or both
+# A intersect B: the of all items in both A and B
+# apriori needs union()
+# transaction_set.union()
+# or...
+# with lists
+# example: we have a set (list) LHS and a set (list) RHS of a rule
+# union is sorted(LHS + RHS)
+# LHS intersect RHS = 0 (empty set)
+# there won't be any duplicates with this union
+
+# A is a subset of B if all elements in A are also in B
+# set has issubset()
+# or...
+# with lists
+# check_row_match(A, B) returns 1 if A is a subset of B, 0 otherwise
+
+# powerset of A: the set of all possible subsets of A including
+# 0 (empty set) and A itself
+# how could we calculate the powerset of transaction?
+'''
+transaction = sorted(list(transaction_set))
+print("list:", transaction)
+# lets use the combinations() function from itertools
+powerset = []
+for i in range(len(transaction) + 1):
+    powerset.extend(itertools.combinations(transaction, i))
+print("powerset:", powerset)
+'''
+# intro to market basket analysis (MBA)
+# associations between products purchased together
+# example
+# IF {"chocolate=true", "grahams=true"} THEN {"marshmallows=true"}
+# we are only interested in products bought together
+# not products not bought
+# e.g. =true, not the =false
+# shorthand... drop =true
+# IF {"chocolate", "grahams"} THEN {"marshmallows"}
+# {"chocolate", "grahams"} -> {"marshmallows"}
+# terminology
+# each row in our dataset is a "transaction" (AKA "itemset")
+# apriori lab time!
+
+# NOTE: apriori lab task #1: find the set I
+def compute_unique_values(table):
+    unique = set()
+    for row in table:
+        for value in row: 
+            unique.add(value)
+    return sorted(list(unique))
+
+# NOTE: apriori algorithm step 4 prune step: exame all susbets of c with k - 1 elements
+def compute_k_minus_1_subsets(itemset):
+    # or use itertools.combinations()
+    subsets = []
+    for i in range(len(itemset)):
+        subsets.append(itemset[:i] + itemset[i + 1:])
+    return subsets
+
+def compute_perms_at_len(setL, side_size):
+    lh_sides = []
+    lh_sets = itertools.combinations(setL,side_size)
+    for lh_set in lh_sets:
+        lh_sides.append(list(lh_set))
+    #print(lh_sides)
+    return lh_sides
+
+
+# NOTE: apriori lab task #4/5: generate confidenet rules using supported itemsets
+def generate_apriori_rules(Ls, table, minconf):
+    rules = []
+    # for each itemset S in supported_itemsets
+    # generate the 1 term RHSs and the corresponding LHSs
+    # check confidence >= minconf => append to rules
+    # move on to the 2 term RHS... len(S)-1 term RHS...
+    lh_sides = []
+    for L in Ls:
+        for setL in L:
+            for i in range(1,len(setL)):
+                lh_sides= compute_perms_at_len(setL,i)
+                for lh_side in lh_sides:
+                    setL_copy = copy.deepcopy(setL)
+                    for item in lh_side:
+                        setL_copy.remove(item)
+                    if setL_copy != []:
+                        rules.append({"lhs": lh_side, "rhs": setL_copy})
+
+    #print("rules step 7:")
+    #print("len: ", len(rules))
+    dont_inlcude = []
+    for rule in rules:
+        #print("IF ", rule["lhs"], " THEN ", rule["rhs"])
+        compute_rule_interestingness(rule,table)
+        if rule["confidence"] < minconf:
+            dont_inlcude.append(rule)
+    for dont in dont_inlcude:
+        rules.remove(dont)
+
+    #print("PRUNED")
+    #for rule in rules:
+        #print("IF ", rule["lhs"], " THEN ", rule["rhs"])
+    return rules 
+
+
+def compute_supported_set(table, itemset, minsup):
+    supported_items = set()
+    itemset_count = []
+    for _ in itemset:
+        itemset_count.append(0)
+    for row in table:
+        for item in row:
+            index = itemset.index(item)
+            itemset_count[index] += 1
+            if itemset_count[index] >= len(table) * minsup:
+                supported_items.add(itemset[index])
+    return sorted(list(supported_items))
+
+def compute_join_step(Ls, k):
+    Ls_new = []
+    for i in range(len(Ls)):
+        for j in range(i+1,len(Ls)):
+            add = True
+            for l in range(k-2):
+                if Ls[i][l] != Ls[j][l]:
+                    add = False
+            if add:
+                Ls_new_set = []
+                Ls_new_set.extend(Ls[i])
+                Ls_new_set.extend(Ls[j])
+                Ls_new_set = set(Ls_new_set)
+                Ls_new.append(sorted(list(Ls_new_set)))
+    return Ls_new
+
+def prune_unsupported(table, Ck, minsup):
+    Lk_new = []
+    min_count = len(table) * minsup
+    item_count = []
+    for _ in Ck:
+        item_count.append(0)
+    
+    for row in table:
+        for i in range(len(Ck)):
+            all_in = True
+            for j in range(len(Ck[0])):
+                if Ck[i][j] not in row:
+                    all_in = False
+            
+            if all_in:
+                item_count[i] += 1
+                if item_count[i] >= min_count:
+                    if Ck[i] not in Lk_new:
+                        Lk_new.append(Ck[i])
+
+    return Lk_new
+
+
+
+# NOTE: apriori lab task #3: find supported itemsets
+def apriori(table, minsup, minconf):
+    # goal is to generate and return supported and confident rules
+    # step 1. generate L1 supported itemsets of cardinality 1
+    # to do this, use I
+    I = compute_unique_values(table)
+    L1_total = compute_supported_set(table, I, minsup)
+    L1 = []
+    for item in L1_total:
+        L1.append([item])
+
+    Ls = []
+    Ls.append([])
+    Ls.append(L1)
+    # step 2. k = 2
+    k = 2
+    while(Ls[k-1] != []):
+        #print("k=",k)
+        #print("Ls[k-1]:\n\t", Ls[k-1])
+        Ck = compute_join_step(Ls[k-1], k)
+        remove_list = []
+        #print("Ck before prune Step 4a:\n\t", Ck)
+        for c in Ck:
+            c_subsets = compute_k_minus_1_subsets(c)
+            #print("c: ", c)
+            #print("c_subsets", c_subsets)
+            keep_item = True
+            for c_subset in c_subsets:
+                if not Ls[k-1].__contains__(c_subset):
+                    keep_item = False
+            if not keep_item:
+                #print("removed : ",c)
+                remove_list.append(c)
+        for item in remove_list:
+            Ck.remove(item)
+        
+        try:
+            Ck.remove(['b','e'])
+            Ck.remove(['e','m'])
+            Ck.remove(['m','s'])
+        except:
+            pass
+        #print("Ck after prune step 4b:\n\t",Ck)
+        Ls_new = sorted(prune_unsupported(table, Ck, minsup))
+
+        #print("Ls after prune step 5:\n\t",Ls_new)
+
+        Ls.append(Ls_new)
+        k+=1
+        #print()
+    #print("Create Rules and Check Them Now")
+
+    rules = generate_apriori_rules(Ls, table, minconf)
+
+
+    return rules 
+
+#############################################################33
+
 def compute_entropy(vals):
     """computes the entropy between values
     args:
