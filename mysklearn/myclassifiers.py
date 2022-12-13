@@ -660,10 +660,11 @@ class MyRandomForrestClassifier:
         self.F = F
         self.seed = seed
         self.trees = None
+        self.trees_indexes = None
         self.X_train = None
         self.y_train = None
     
-    def find_best_trees(self, trees, scores):
+    def find_best_trees(self, trees, scores, tree_indexes):
         """Utility function to find the best M decision trees
         
         args:
@@ -673,14 +674,17 @@ class MyRandomForrestClassifier:
             best_trees: the best M trees 
         """
         best_trees = []
+        best_trees_indexes = []
         for i in range(self.M):
             curr_max = max(scores)
             max_ind = scores.index(curr_max)
             best_trees.append(trees[max_ind])
+            best_trees_indexes.append(tree_indexes[max_ind])
             del scores[max_ind]
             del trees[max_ind]
+            del tree_indexes[max_ind]
 
-        return best_trees
+        return best_trees, best_trees_indexes
 
     def fit(self, X_train, y_train):
         """Generates a random forrest of decision trees from a dataset of size M
@@ -690,21 +694,17 @@ class MyRandomForrestClassifier:
         """
         trees = []
         scores = []
+        trees_indexes=[]
         for i in range(self.N):
             curr_X, curr_X_test, curr_y, curr_y_test = myutils.bootstrap_sample(X_train, y_train, random_state=self.seed)
-
-            curr_X = [self.compute_random_subset(curr_X[i]) for i in range(len(curr_X))]
-            print(curr_X)
-            # randomize columns in X
-            rand_inds = sorted(list(np.random.choice(len(curr_X[0]), self.F, replace=False)))
             
+            rand_inds = sorted(list(np.random.choice(len(curr_X[0]), self.F, replace=False)))
             X = []
             for row in range(len(curr_X)):
                 curr_row = []
                 for col in rand_inds:
                     curr_row.append(curr_X[row][col])
                 X.append(curr_row)
-
             X_test = []
             for row in range(len(curr_X_test)):
                 curr_row = []
@@ -713,15 +713,16 @@ class MyRandomForrestClassifier:
                 X_test.append(curr_row)
 
             curr_tree = MyDecisionTreeClassifier()
-            curr_tree.fit(curr_X, curr_y)
+            curr_tree.fit(X, curr_y)
             preds = curr_tree.predict(curr_X_test)
             score = myevaluation.accuracy_score(curr_y_test, preds)
-            print("Score: ", score)
-            # print("Preds: ", preds)
+            #print("Score: ", score)
+            #print("Preds: ", preds)
             trees.append(curr_tree)
             scores.append(score)
-
-        self.trees = self.find_best_trees(trees, scores)
+            trees_indexes.append(rand_inds)
+        
+        self.trees,self.trees_indexes = self.find_best_trees(trees, scores, trees_indexes)
 
     def majority_vote(self, instance):
         """Utility function to get the majority vote from the forrest
@@ -737,8 +738,14 @@ class MyRandomForrestClassifier:
             return None
         
         votes = []
-        for tree in self.trees:
-            votes.append(tree.predict([instance])[0])
+        for i in range(len(self.trees)):
+            instance_to_predict =[]
+            for index in self.trees_indexes[i]:
+                instance_to_predict.append(instance[index])
+            #print(instance_to_predict)
+            vote = self.trees[i].predict([instance_to_predict])[0]
+            #print(vote)
+            votes.append(vote)
 
         return max(set(votes), key = votes.count)
 
@@ -753,7 +760,7 @@ class MyRandomForrestClassifier:
         """
 
         predictions = []
-
+        #print(self.trees_indexes)
         for instance in X_test:
             vote = self.majority_vote(instance)
             predictions.append(vote)
