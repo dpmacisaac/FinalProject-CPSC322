@@ -9,6 +9,17 @@ import numpy as np # use numpy's random number generation
 from tabulate import tabulate
 from mysklearn import myevaluation
 
+def compute_entropy(vals):
+    """computes the entropy between values
+    args:
+        vals: values to calculate
+    """
+    e = 0
+    for val in vals:
+        e += -(val * math.log(val, 2))
+
+    return e  
+
 def randomize_in_place(alist, parallel_list=None): 
     """Function taken from in class notes. Randomizes a list
     Args:

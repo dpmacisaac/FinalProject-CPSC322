@@ -62,6 +62,7 @@ class MyDecisionTreeClassifier:
         # so the class label is at instance [-1]
         self.X_train = X_train
         self.y_train = y_train
+
         train = [X_train[i]+ [y_train[i]] for i in range(len(X_train))]
         self.header = []
         domain = {}
@@ -74,14 +75,8 @@ class MyDecisionTreeClassifier:
                 curr_attr = "att" + str(j)
                 if not domain[curr_attr].__contains__(X_train[i][j]):
                     domain[curr_attr].append(X_train[i][j])
-        #print()
-        #print("start header:", self.header)
-        #print("start domain:",domain)
-        #print()
 
-        # pass by obj reference !!
         self.tree = myutils.tdidt(train, copy.deepcopy(self.header), self.header, domain, 0)
-        #print("\nFinal Tree:\n", self.tree)
 
     def predict(self, X_test):
         """Makes predictions for test instances in X_test.
@@ -173,6 +168,7 @@ class MySimpleLinearRegressionClassifier:
         for item in y_predicted_numeric:
             y_predicted.append(self.discretizer(item))
         return y_predicted
+
 
 class MyKNeighborsClassifier:
     """Represents a simple k nearest neighbors classifier.
@@ -281,69 +277,6 @@ class MyKNeighborsClassifier:
 
         return y_predicted
 
-class MyDummyClassifier:
-    """Represents a "dummy" classifier using the "most_frequent" strategy.
-        The most_frequent strategy is a Zero-R classifier, meaning it ignores
-        X_train and produces zero "rules" from it. Instead, it only uses
-        y_train to see what the most frequent class label is. That is
-        always the dummy classifier's prediction, regardless of X_test.
-
-    Attributes:
-        most_common_label(obj): whatever the most frequent class label in the
-            y_train passed into fit()
-
-    Notes:
-        Loosely based on sklearn's DummyClassifier:
-            https://scikit-learn.org/stable/modules/generated/sklearn.dummy.DummyClassifier.html
-    """
-    def __init__(self):
-        """Initializer for DummyClassifier.
-
-        """
-        self.most_common_label = None
-
-    def fit(self, X_train, y_train):
-        """Fits a dummy classifier to X_train and y_train.
-
-        Args:
-            X_train(list of list of numeric vals): The list of training instances (samples).
-                The shape of X_train is (n_train_samples, n_features)
-            y_train(list of obj): The target y values (parallel to X_train)
-                The shape of y_train is n_train_samples
-
-        Notes:
-            Since Zero-R only predicts the most frequent class label, this method
-                only saves the most frequent class label.
-        """
-        classifiers = []
-        count = []
-        for item in y_train:
-            if classifiers.__contains__(item):
-                count[classifiers.index(item)] += 1
-            else:
-                classifiers.append(item)
-                count.append(1)
-        most = (-1,-1)
-        for k in range(len(count)):
-            if count[k] > most[0]:
-                most = (count[k],k)
-        self.most_common_label = classifiers[most[1]]
-
-    def predict(self, X_test):
-        """Makes predictions for test instances in X_test.
-
-        Args:
-            X_test(list of list of numeric vals): The list of testing samples
-                The shape of X_test is (n_test_samples, n_features)
-
-        Returns:
-            y_predicted(list of obj): The predicted target y values (parallel to X_test)
-        """
-        y_predicted = []
-        for _ in X_test:
-            y_predicted.append(self.most_common_label)
-        return y_predicted
-
 class MyNaiveBayesClassifier:
     """Represents a Naive Bayes classifier.
 
@@ -441,7 +374,7 @@ class MyNaiveBayesClassifier:
                 result_probabilites[class_val] = result
             #print(result_probabilites)
             y_predicted.append(myutils.find_most_naive_bays(result_probabilites, self.priors))
-        #print(y_predicted)
+        # print(y_predicted)
         return y_predicted
 
     def print(self, mode):
@@ -714,7 +647,7 @@ class MyRandomForrestClassifier:
     It will build a 'forrest' of decision trees and use majority voting 
     among the best of the trees in order to make a prediction about a dataset.    
     """
-    def __init__(self, N=50, M=25, F=5):
+    def __init__(self, N=50, M=25, F=5, seed=0):
         """Initializer for RandomForrestClassifier
         
         args: 
@@ -725,6 +658,7 @@ class MyRandomForrestClassifier:
         self.N = N
         self.M = M
         self.F = F
+        self.seed = seed
         self.trees = None
         self.X_train = None
         self.y_train = None
@@ -747,21 +681,6 @@ class MyRandomForrestClassifier:
             del trees[max_ind]
 
         return best_trees
-            
-    def compute_random_subset(self, instance):
-        """Taken from class. Function for getting a random subset of the data's attributes
-
-        args:
-            instance: instance to use
-
-        returns:
-            new random subset of data
-        
-        """
-        data_copy = instance.copy() # shallow copy
-        np.random.shuffle(data_copy) # inplace shuffle
-        return data_copy[:self.F]
-
 
     def fit(self, X_train, y_train):
         """Generates a random forrest of decision trees from a dataset of size M
@@ -772,15 +691,33 @@ class MyRandomForrestClassifier:
         trees = []
         scores = []
         for i in range(self.N):
-            curr_X, curr_X_test, curr_y, curr_y_test = myutils.bootstrap_sample(X_train, y_train)
+            curr_X, curr_X_test, curr_y, curr_y_test = myutils.bootstrap_sample(X_train, y_train, random_state=self.seed)
 
             curr_X = [self.compute_random_subset(curr_X[i]) for i in range(len(curr_X))]
             print(curr_X)
+            # randomize columns in X
+            rand_inds = sorted(list(np.random.choice(len(curr_X[0]), self.F, replace=False)))
+            
+            X = []
+            for row in range(len(curr_X)):
+                curr_row = []
+                for col in rand_inds:
+                    curr_row.append(curr_X[row][col])
+                X.append(curr_row)
+
+            X_test = []
+            for row in range(len(curr_X_test)):
+                curr_row = []
+                for col in rand_inds:
+                    curr_row.append(curr_X_test[row][col])
+                X_test.append(curr_row)
+
             curr_tree = MyDecisionTreeClassifier()
             curr_tree.fit(curr_X, curr_y)
             preds = curr_tree.predict(curr_X_test)
             score = myevaluation.accuracy_score(curr_y_test, preds)
-
+            print("Score: ", score)
+            # print("Preds: ", preds)
             trees.append(curr_tree)
             scores.append(score)
 
@@ -803,7 +740,6 @@ class MyRandomForrestClassifier:
         for tree in self.trees:
             votes.append(tree.predict([instance])[0])
 
-        #print(votes)
         return max(set(votes), key = votes.count)
 
     def predict(self, X_test):
