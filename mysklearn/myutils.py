@@ -9,6 +9,133 @@ import numpy as np # use numpy's random number generation
 from tabulate import tabulate
 from mysklearn import myevaluation
 
+def randomize_in_place(alist, parallel_list=None): 
+    """Function taken from in class notes. Randomizes a list
+    Args:
+        alist: the list to randomize
+        parallel_list: optional, parallel list to alist to be randomized
+            in the same order
+    """
+    for i in range(len(alist)):
+        rand_index = np.random.randint(0, len(alist)) 
+
+        alist[i], alist[rand_index] = alist[rand_index], alist[i]
+        if parallel_list is not None:
+            parallel_list[i], parallel_list[rand_index] = parallel_list[rand_index], parallel_list[i]
+    
+
+def bootstrap_sample(X, y=None, n_samples=None, random_state=None):
+    """Split dataset into bootstrapped training set and out of bag test set.
+    Args:
+        X(list of list of obj): The list of samples
+        y(list of obj): The target y values (parallel to X)
+            Default is None (in this case, the calling code only wants to sample X)
+        n_samples(int): Number of samples to generate. If left to None (default) this is automatically
+            set to the first dimension of X.
+        random_state(int): integer used for seeding a random number generator for reproducible results
+    Returns:
+        X_sample(list of list of obj): The list of samples
+        X_out_of_bag(list of list of obj): The list of "out of bag" samples (e.g. left-over samples)
+        y_sample(list of obj): The list of target y values sampled (parallel to X_sample)
+            None if y is None
+        y_out_of_bag(list of obj): The list of target y values "out of bag" (parallel to X_out_of_bag)
+            None if y is None
+    Notes:
+        Loosely based on sklearn's resample():
+            https://scikit-learn.org/stable/modules/generated/sklearn.utils.resample.html
+        Sample indexes of X with replacement, then build X_sample and X_out_of_bag
+            as lists of instances using sampled indexes (use same indexes to build
+            y_sample and y_out_of_bag)
+    """
+    if random_state:
+        np.random.seed(random_state)
+
+    if n_samples is None: 
+        n_samples = int(len(X) * 0.632)
+
+    # List of indecies:
+    indecies = [_ for _ in range(len(X))]
+    randomize_in_place(indecies)
+    
+    sample_inds = indecies[0:n_samples]
+    oob_inds = indecies[n_samples:]
+
+    X_sample = [X[_] for _ in sample_inds]
+    X_out_of_bag = [X[_] for _ in oob_inds]
+
+    if y is not None:
+        y_sample = [y[_] for _ in sample_inds]
+        y_out_of_bag = [y[_] for _ in oob_inds]
+        return X_sample, X_out_of_bag, y_sample, y_out_of_bag
+
+    else:
+        return X_sample, X_out_of_bag, None, None
+
+
+def print_header(header):
+    """Simple function to print each step nicely
+
+    args:
+        header    
+    """
+    print("====================================")
+    print(header)
+    print("====================================")
+
+
+def get_classifier_stats(classifier, X, y, k, dummy=False):
+    """
+    
+    """
+    avgs = []
+    precs = []
+    recalls = []
+    f1s = []
+
+    folds = myevaluation.stratified_kfold_split(X, y, k, shuffle=True)
+    
+    for i in range(k):
+        X_test = [X[_] for _ in folds[i][0]]
+        y_test = [y[_] for _ in folds[i][0]]
+
+        X_train = [X[_] for _ in folds[i][1]]
+        y_train = [y[_] for _ in folds[i][1]]
+
+        classifier.fit(X_train, y_train)
+
+        preds = classifier.predict(X_test)
+
+        if dummy:
+            preds = [classifier.predict(X)[0][0] for _ in range(len(X))]
+
+        avgs.append(myevaluation.accuracy_score(preds, y_test))
+        precs.append(myevaluation.binary_precision_score(y_test, preds))
+        recalls.append(myevaluation.binary_recall_score(y_test, preds))
+        f1s.append(myevaluation.binary_f1_score(y_test, preds))
+    
+    acc = round(sum(avgs) / len(avgs), 3)
+    er = round(1 - acc, 3)
+    prec = round(sum(precs) / len(precs), 3)
+    recall = round(sum(recalls) / len(recalls), 3)
+    f1 = round(sum(f1s) / len(f1s), 3)
+
+    return acc*100, er*100, prec*100, recall*100, f1*100
+
+def print_stats(header, stats):
+    """Helper function to print classifier stats
+    args:
+        header: classifier name
+        stats: stats returned by get_classifier_stats   
+    """
+    print("====================================")
+    print(header)
+    print("====================================")
+    print("Accuracy: ", stats[0])
+    print("Error Rate: ", stats[1])
+    print("Precision: ", stats[2])
+    print("Recall: ", stats[3])
+    print("F1 Score: ", stats[4])
+
 ###############################################################################################
 # PA7 Functions
 ###############################################################################################

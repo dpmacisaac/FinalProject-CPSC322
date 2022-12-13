@@ -39,21 +39,26 @@ def binary_precision_score(y_true, y_pred, labels=None, pos_label=None):
         Loosely based on sklearn's precision_score():
             https://scikit-learn.org/stable/modules/generated/sklearn.metrics.precision_score.html
     """
-    true_pos = 0
-    false_pos = 0
-    pos_val = None
+    if labels is None:
+        labels = np.unique(y_true)
+
     if pos_label is None:
-        pos_val = labels[0]
-    else:
-        pos_val = pos_label
+        pos_label = labels[0]
+
+    tp_count = 0
+    fp_count = 0
+
     for i in range(len(y_true)):
-        if y_true[i] == y_pred[i] and y_true[i] == pos_val:
-            true_pos+=1
-        elif y_pred[i] == pos_val:
-            false_pos+=1
-    if true_pos == 0 and false_pos == 0:
-        return 0.0
-    precision = true_pos/(true_pos+false_pos)
+        if y_true[i] == y_pred[i] and y_pred[i] == pos_label:
+            tp_count += 1
+        elif y_pred[i] == pos_label:
+            fp_count += 1
+
+    try:
+        precision = tp_count / (tp_count + fp_count)
+    except:
+        precision = 0
+    
     return precision
 
 def binary_recall_score(y_true, y_pred, labels=None, pos_label=None):
@@ -79,23 +84,27 @@ def binary_recall_score(y_true, y_pred, labels=None, pos_label=None):
         Loosely based on sklearn's recall_score():
             https://scikit-learn.org/stable/modules/generated/sklearn.metrics.recall_score.html
     """
-    true_pos = 0
-    false_neg = 0
-    pos_val = None
-    if pos_label is None:
-        pos_val = labels[0]
-    else:
-        pos_val = pos_label
-    for i in range(len(y_true)):
-        if y_true[i] == y_pred[i] and y_true[i] == pos_val:
-            true_pos+=1
-        elif y_true[i] == pos_val:
-            false_neg+=1
-    if true_pos == 0 and false_neg == 0:
-        return 0.0
-    recall = true_pos/(true_pos+false_neg)
-    return recall
+    if labels is None:
+        labels = np.unique(y_true)
 
+    if pos_label is None:
+        pos_label = labels[0]
+
+    tp_count = 0
+    fn_count = 0
+
+    for i in range(len(y_true)):
+        if y_true[i] == y_pred[i] and y_pred[i] == pos_label:
+            tp_count += 1
+        elif y_pred[i] != pos_label and y_true[i] == pos_label:
+            fn_count += 1
+
+    try:
+        recall = tp_count / (tp_count + fn_count)
+    except:
+        recall = 0
+
+    return recall
 def binary_f1_score(y_true, y_pred, labels=None, pos_label=None):
     """Compute the F1 score (for binary classification), also known as balanced F-score or F-measure.
         The F1 score can be interpreted as a harmonic mean of the precision and recall,
@@ -122,10 +131,13 @@ def binary_f1_score(y_true, y_pred, labels=None, pos_label=None):
     """
     precision = binary_precision_score(y_true, y_pred, labels, pos_label)
     recall = binary_recall_score(y_true, y_pred, labels, pos_label)
-    if recall == 0 and precision == 0:
-        return 0.0
-    return 2 * (precision*recall)/(precision + recall)
 
+    try:
+        f1 = 2 * (precision * recall) / (precision + recall)
+    except:
+        f1 = 0
+
+    return f1 
 
 #####################################################################
 # PA5
@@ -383,12 +395,10 @@ def accuracy_score(y_true, y_pred, normalize=True):
         Loosely based on sklearn's accuracy_score():
             https://scikit-learn.org/stable/modules/generated/sklearn.metrics.accuracy_score.html#sklearn.metrics.accuracy_score
     """
-    correct = 0
-    total = 0
-    for i in range(len(y_true)):
-        if y_pred[i] == y_true[i]:
-            correct += 1
-        total += 1
-    if normalize:
-        return float(correct/total)
-    return correct
+    correct = [y_true[i] for i in range(len(y_pred)) if y_true[i] == y_pred[i]]
+
+    if correct and normalize:
+            return float(len(correct) / len(y_pred))
+    
+    return len(correct)
+

@@ -101,6 +101,23 @@ class MyPyTable:
                     )  # tries to convert val
                 except:  # if it fails, nothing happens, moves to next val
                     pass
+                
+    def convert_to_string(self):
+        """Try to convert each value in the table to a string
+
+        Notes:
+            Leave values as is that cannot be converted to string
+        """
+        for row in range(len(self.data)):
+            for val in range(
+                len(self.data[row])
+            ):  # iterates through every val in table
+                try:
+                    self.data[row][val] = str(
+                        self.data[row][val]
+                    )  # tries to convert val
+                except:  # if it fails, nothing happens, moves to next val
+                    pass
 
     def drop_rows(self, row_indexes_to_drop):  # done
         """Remove rows from the table data.

@@ -11,6 +11,9 @@ Simple Classifiers:
 import copy
 from mysklearn import myutils
 from mysklearn.mysimplelinearregressor import MySimpleLinearRegressor
+from tabulate import tabulate
+import mysklearn.myevaluation as myevaluation
+import numpy as np
 
 class MyDecisionTreeClassifier:
     """Represents a decision tree classifier.
@@ -469,3 +472,373 @@ class MyNaiveBayesClassifier:
             print(self.posteriors)
         if mode == 1:
             print(self.priors)
+
+class MyAssociationRuleMiner:
+    """Represents an association rule miner.
+
+    Attributes:
+        minsup(float): The minimum support value to use when computing supported itemsets
+        minconf(float): The minimum confidence value to use when generating rules
+        X_train(list of list of obj): The list of training instances (samples)
+                The shape of X_train is (n_train_samples, n_features)
+        rules(list of dict): The generated rules
+
+    Notes:
+        Implements the apriori algorithm
+        Terminology: instance = sample = row and attribute = feature = column
+    """
+    def __init__(self, minsup=0.25, minconf=0.8):
+        """Initializer for MyAssociationRuleMiner.
+
+        Args:
+            minsup(float): The minimum support value to use when computing supported itemsets
+                (0.25 if a value is not provided and the default minsup should be used)
+            minconf(float): The minimum confidence value to use when generating rules
+                (0.8 if a value is not provided and the default minconf should be used)
+        """
+        self.minsup = minsup
+        self.minconf = minconf
+        self.X_train = None
+        self.rules = None
+
+    def compute_unique_values(self, table=None):
+        """Function to create a list of all the unique values in a table       
+                (Taken from class)
+
+        args:
+            table: optional variable to pass in a data set. If nothing passed, use X_train
+        """
+        if table is None:
+            table = self.X_train
+
+        unique = set()
+        for row in table:
+            for value in row:
+                unique.add(value)
+
+        return sorted(list(unique))
+    
+    def calc_support(self, subset, table=None):
+        """Calculates the support of a given subset
+        
+        args:
+            subset: subset to calc support from
+            table: the table to use in the calcuations
+        
+        returns:
+            support value of the subset
+        """
+        if table is None:
+            table = self.X_train
+        
+        appearance_count = 0
+
+        for row in table:
+            # Checking if subset is a subset of row:
+            if all(x in row for x in subset) or subset in row:
+                appearance_count += 1
+
+        return appearance_count/len(table)
+        
+    def create_candidate_list(self, L):
+        """Creates a candidate list from a given set L
+
+        args:
+            L: set to create candidate list from       
+        """
+        C = []
+
+        if not isinstance(L[0], list):
+            for a in L:
+                for b in L:
+                    if a[-1] != b[-1]:    
+                        c = sorted([a, b])
+                        if c not in C:
+                            C.append(c)
+
+        else:
+            for a in L:
+                for b in L:                   
+                    if all(x in a[:-1] for x in b[:-1]):
+                        if len(a) == 1:
+                            if a != b[-1]:
+                                c = sorted([a, b[-1]])
+                                if c not in C:
+                                    C.append(c)
+                        else:
+                            if a[-1] != b[-1]:
+                                temp = [item for item in a]
+                                temp.extend(b[-1])
+                                c = sorted(temp)
+                                if c not in C:
+                                    C.append(c)
+        return C
+
+    def check_row_match(self, terms, row):
+        """Taken from class
+        """
+        # return 1 if all the terms are in the row (match)
+        # return 0 otherwise
+        for term in terms:
+            if term not in row:
+                return 0
+        return 1
+    
+    def compute_rule_counts(self, rule, table):
+        """Taken from class. Used for getting confidence.
+        """
+        Nleft = Nright = Nboth = 0
+        Ntotal = len(table)
+        for row in table:
+            Nleft += self.check_row_match(rule["lhs"], row)
+            Nright += self.check_row_match(rule["rhs"], row)
+            Nboth += self.check_row_match(rule["lhs"] + rule["rhs"], row)
+        
+        return Nleft, Nright, Nboth, Ntotal
+
+    def valid_confidence(self, rule, table):
+        """Function to check the confidence of a rule
+
+        args:
+            rule: rule to check the confidence of
+            table: table to calc confidence with
+        returns:
+            1 if confidence of rule is greater than minconf
+            0 if not
+        """
+        Nleft, Nright, Nboth, Ntotal = self.compute_rule_counts(rule, table)
+
+        conf = Nboth/Nleft
+
+        if conf > self.minconf:
+            return 1
+        return 0
+
+    def generate_apriori_rules(self, supported_itemsets, table=None, minconf=None):
+        """Generates confident rules using supported itemsets and minimum confidence
+
+        args:
+            supported_itemsets:
+            table: Optional variable if using data other than X_train
+            minconf: Optional variable if using minconf other than self.minconf
+        
+        """
+        if table is None:
+            table = self.X_train
+        if minconf is None:
+            minconf = self.minconf
+
+        rules = []
+
+        for itemset in supported_itemsets:
+            for item in itemset:
+                rule1 = {"lhs":[item], "rhs":[i for i in itemset if i != item]}
+                rule2 = {"lhs":[i for i in itemset if i != item], "rhs":[item]}
+                for rule in [rule1, rule2]:
+                    if rule not in rules:
+                        if self.valid_confidence(rule, table) == 1:
+                            rules.append(rule)
+        return rules
+        
+    def apriori(self, table=None, minsup=None, minconf=None):
+        """Generates and returns support and confidence rules
+
+        args:
+            table, minsup, minconf: all optional params 
+        
+        returns:
+            support and confidence rules
+        """
+        if table is None:
+            table = self.X_train
+        if minsup is None:
+            minsup = self.minsup
+        if minconf is None:
+            minconf = self.minconf
+
+        supported_itemsets = []
+        # step 1. Generating L1 supported itemsets of cardinality 1:
+        I = self.compute_unique_values(table)
+        # Checking support of singletons in L1:
+        I = [s for s in I if self.calc_support(s, table) >= minsup]
+        # step 2:
+        k = 1
+        L_sets = [I]
+        while (len(L_sets[k-1]) > 0):
+            C = self.create_candidate_list(L_sets[k-1])
+            L = [s for s in C if self.calc_support(s, table) >= minsup]
+            L_sets.append(L)
+            k += 1
+
+        for row in L_sets[1:]:
+            for item in row:
+                supported_itemsets.append(item)
+
+        rules = self.generate_apriori_rules(supported_itemsets, table, minconf)
+
+        return rules 
+
+
+    def fit(self, X_train):
+        """Fits an association rule miner to X_train using the Apriori algorithm.
+
+        Args:
+            X_train(list of list of obj): The list of training instances (samples)
+                The shape of X_train is (n_train_samples, n_features)
+
+        Notes:
+            Store the list of generated association rules in the rules attribute
+            If X_train represents a non-market basket analysis table, then:
+                Attribute labels should be prepended to attribute values in X_train
+                    before fit() is called (e.g. "att=val", ...).
+                Make sure a rule does not include the same attribute more than once
+        """
+        self.X_train = X_train
+        self.rules = self.apriori()
+
+
+    def print_association_rules(self):
+        """Prints the association rules in the format "IF val AND ... THEN val AND...", one rule on each line.
+
+        Notes:
+            Each rule's output should include an identifying number, the rule, the rule's support,
+            the rule's confidence, and the rule's lift
+            Consider using the tabulate library to help with this: https://pypi.org/project/tabulate/
+        """
+        header = ["#", "association rule", "support", "confidence", "lift"]
+        table = [[str(i), "", "", "", ""] for i in range(len(self.rules))]
+        
+        for i in range(len(self.rules)):
+            Nleft, Nright, Nboth, Ntotal = self.compute_rule_counts(self.rules[i], self.X_train)
+
+            rule = "IF " + self.rules[i]["lhs"][0]
+            if len(self.rules[i]["lhs"]) > 1:
+                for j in range(len(self.rules[i]["lhs"][1:])):
+                    rule += " AND " + self.rules[i]["lhs"][j+1]
+            
+            rule += " THEN " + self.rules[i]["rhs"][0]
+            if len(self.rules[i]["rhs"]) > 1:
+                for j in range(len(self.rules[i]["rhs"][1:])):
+                    rule += " AND " + self.rules[i]["rhs"][j+1]
+            
+            table[i][1] = rule
+            table[i][2] = Nboth / Ntotal
+            table[i][3] = Nboth / Nleft
+            table[i][4] = (Nboth / Ntotal) / ((Nleft / Ntotal) * (Nright / Ntotal))
+        
+        print(tabulate(table, headers=header))
+
+class MyRandomForrestClassifier:
+    """This class implements the RandomForrestClassifier
+
+    It will build a 'forrest' of decision trees and use majority voting 
+    among the best of the trees in order to make a prediction about a dataset.    
+    """
+    def __init__(self, N=50, M=25, F=5):
+        """Initializer for RandomForrestClassifier
+        
+        args: 
+            N: the nunmber of classifiers in the forrest
+            M: the number of 'better' classifiers
+            F: the number of random attributes to select from
+        """
+        self.N = N
+        self.M = M
+        self.F = F
+        self.trees = None
+        self.X_train = None
+        self.y_train = None
+    
+    def find_best_trees(self, trees, scores):
+        """Utility function to find the best M decision trees
+        
+        args:
+            trees, scores: parallel lists of size N to make forrest
+        
+        returns:
+            best_trees: the best M trees 
+        """
+        best_trees = []
+        for i in range(self.M):
+            curr_max = max(scores)
+            max_ind = scores.index(curr_max)
+            best_trees.append(trees[max_ind])
+            del scores[max_ind]
+            del trees[max_ind]
+
+        return best_trees
+            
+    def compute_random_subset(self, instance):
+        """Taken from class. Function for getting a random subset of the data's attributes
+
+        args:
+            instance: instance to use
+
+        returns:
+            new random subset of data
+        
+        """
+        data_copy = instance.copy() # shallow copy
+        np.random.shuffle(data_copy) # inplace shuffle
+        return data_copy[:self.F]
+
+
+    def fit(self, X_train, y_train):
+        """Generates a random forrest of decision trees from a dataset of size M
+        
+        args:
+            X_train, y_train: training data
+        """
+        trees = []
+        scores = []
+        for i in range(self.N):
+            curr_X, curr_X_test, curr_y, curr_y_test = myutils.bootstrap_sample(X_train, y_train)
+
+            curr_X = [self.compute_random_subset(curr_X[i]) for i in range(len(curr_X))]
+
+            curr_tree = MyDecisionTreeClassifier()
+            curr_tree.fit(curr_X, curr_y)
+            preds = curr_tree.predict(curr_X_test)
+            score = myevaluation.accuracy_score(curr_y_test, preds)
+
+            trees.append(curr_tree)
+            scores.append(score)
+
+        self.trees = self.find_best_trees(trees, scores)
+
+    def majority_vote(self, instance):
+        """Utility function to get the majority vote from the forrest
+        
+        args:
+            instance: the instance to make prediction with
+
+        returns: 
+            vote: the majority voted prediction
+        """    
+        if self.trees == None:
+            print("ERROR: FIT() NOT CALLED")
+            return None
+        
+        votes = []
+        for tree in self.trees:
+            votes.append(tree.predict([instance])[0])
+        print(votes)
+        return max(set(votes), key = votes.count)
+
+    def predict(self, X_test):
+        """Makes a prediciton on a set of instances using the forrest created in fit()
+
+        args:
+            X_test: instances to make prediction using
+
+        returns:
+            predictions: list of predictions parallel to X_test
+        """
+
+        predictions = []
+
+        for instance in X_test:
+            vote = self.majority_vote(instance)
+            predictions.append(vote)
+        
+        return predictions
