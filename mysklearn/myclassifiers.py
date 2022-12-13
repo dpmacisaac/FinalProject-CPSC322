@@ -12,6 +12,8 @@ import copy
 from mysklearn import myutils
 from mysklearn.mysimplelinearregressor import MySimpleLinearRegressor
 from tabulate import tabulate
+import mysklearn.myevaluation as myevaluation
+import numpy as np
 
 class MyDecisionTreeClassifier:
     """Represents a decision tree classifier.
@@ -725,3 +727,118 @@ class MyAssociationRuleMiner:
             table[i][4] = (Nboth / Ntotal) / ((Nleft / Ntotal) * (Nright / Ntotal))
         
         print(tabulate(table, headers=header))
+
+class MyRandomForrestClassifier:
+    """This class implements the RandomForrestClassifier
+
+    It will build a 'forrest' of decision trees and use majority voting 
+    among the best of the trees in order to make a prediction about a dataset.    
+    """
+    def __init__(self, N=50, M=25, F=5):
+        """Initializer for RandomForrestClassifier
+        
+        args: 
+            N: the nunmber of classifiers in the forrest
+            M: the number of 'better' classifiers
+            F: the number of random attributes to select from
+        """
+        self.N = N
+        self.M = M
+        self.F = F
+        self.trees = None
+        self.X_train = None
+        self.y_train = None
+    
+    def find_best_trees(self, trees, scores):
+        """Utility function to find the best M decision trees
+        
+        args:
+            trees, scores: parallel lists of size N to make forrest
+        
+        returns:
+            best_trees: the best M trees 
+        """
+        best_trees = []
+        for i in range(self.M):
+            curr_max = max(scores)
+            max_ind = scores.index(curr_max)
+            best_trees.append(trees[max_ind])
+            del scores[max_ind]
+            del trees[max_ind]
+
+        return best_trees
+            
+    def compute_random_subset(self, instance):
+        """Taken from class. Function for getting a random subset of the data's attributes
+
+        args:
+            instance: instance to use
+
+        returns:
+            new random subset of data
+        
+        """
+        data_copy = instance.copy() # shallow copy
+        np.random.shuffle(data_copy) # inplace shuffle
+        return data_copy[:self.F]
+
+
+    def fit(self, X_train, y_train):
+        """Generates a random forrest of decision trees from a dataset of size M
+        
+        args:
+            X_train, y_train: training data
+        """
+        trees = []
+        scores = []
+        for i in range(self.N):
+            curr_X, curr_X_test, curr_y, curr_y_test = myutils.bootstrap_sample(X_train, y_train)
+
+            curr_X = [self.compute_random_subset(curr_X[i]) for i in range(len(curr_X))]
+
+            curr_tree = MyDecisionTreeClassifier()
+            curr_tree.fit(curr_X, curr_y)
+            preds = curr_tree.predict(curr_X_test)
+            score = myevaluation.accuracy_score(curr_y_test, preds)
+
+            trees.append(curr_tree)
+            scores.append(score)
+
+        self.trees = self.find_best_trees(trees, scores)
+
+    def majority_vote(self, instance):
+        """Utility function to get the majority vote from the forrest
+        
+        args:
+            instance: the instance to make prediction with
+
+        returns: 
+            vote: the majority voted prediction
+        """    
+        if self.trees == None:
+            print("ERROR: FIT() NOT CALLED")
+            return None
+        
+        votes = []
+        for tree in self.trees:
+            votes.append(tree.predict([instance])[0])
+        print(votes)
+        return max(set(votes), key = votes.count)
+
+    def predict(self, X_test):
+        """Makes a prediciton on a set of instances using the forrest created in fit()
+
+        args:
+            X_test: instances to make prediction using
+
+        returns:
+            predictions: list of predictions parallel to X_test
+        """
+
+        predictions = []
+
+        for instance in X_test:
+            vote = self.majority_vote(instance)
+            predictions.append(vote)
+        
+        return predictions
