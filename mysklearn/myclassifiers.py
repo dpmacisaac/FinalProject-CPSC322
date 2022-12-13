@@ -109,6 +109,67 @@ class MyDecisionTreeClassifier:
         rule_str = "IF "
         myutils.print_helper(self.tree, attribute_names, class_name, rule_str)
 
+#######################################################################
+# PA2-6
+#######################################################################
+
+class MySimpleLinearRegressionClassifier:
+    """Represents a simple linear regression classifier that discretizes
+        predictions from a simple linear regressor (see MySimpleLinearRegressor).
+
+    Attributes:
+        discretizer(function): a function that discretizes a numeric value into
+            a string label. The function's signature is func(obj) -> obj
+        regressor(MySimpleLinearRegressor): the underlying regression model that
+            fits a line to x and y data
+
+    Notes:
+        Terminology: instance = sample = row and attribute = feature = column
+    """
+
+    def __init__(self, discretizer, regressor=None):
+        """Initializer for MySimpleLinearClassifier.
+
+        Args:
+            discretizer(function): a function that discretizes a numeric value into
+                a string label. The function's signature is func(obj) -> obj
+            regressor(MySimpleLinearRegressor): the underlying regression model that
+                fits a line to x and y data (None if to be created in fit())
+        """
+        self.discretizer = discretizer
+        self.regressor = regressor
+
+    def fit(self, X_train, y_train):
+        """Fits a simple linear regression line to X_train and y_train.
+
+        Args:
+            X_train(list of list of numeric vals): The list of training instances (samples).
+                The shape of X_train is (n_train_samples, n_features)
+            y_train(list of obj): The target y values (parallel to X_train)
+                The shape of y_train is n_train_samples
+        """
+        if self.regressor is None:
+            self.regressor = MySimpleLinearRegressor()
+        self.regressor.fit(X_train, y_train)
+
+    def predict(self, X_test):
+        """Makes predictions for test samples in X_test by applying discretizer
+            to the numeric predictions from regressor.
+
+        Args:
+            X_test(list of list of numeric vals): The list of testing samples
+                The shape of X_test is (n_test_samples, n_features)
+
+        Returns:
+            y_predicted(list of obj): The predicted target y values (parallel to X_test)
+        """
+        y_predicted_numeric = self.regressor.predict(X_test)
+        y_predicted = []
+        for item in y_predicted_numeric:
+            y_predicted.append(self.discretizer(item))
+        return y_predicted
+
+
 class MyKNeighborsClassifier:
     """Represents a simple k nearest neighbors classifier.
 
@@ -632,6 +693,8 @@ class MyRandomForrestClassifier:
         for i in range(self.N):
             curr_X, curr_X_test, curr_y, curr_y_test = myutils.bootstrap_sample(X_train, y_train, random_state=self.seed)
 
+            curr_X = [self.compute_random_subset(curr_X[i]) for i in range(len(curr_X))]
+            print(curr_X)
             # randomize columns in X
             rand_inds = sorted(list(np.random.choice(len(curr_X[0]), self.F, replace=False)))
             
