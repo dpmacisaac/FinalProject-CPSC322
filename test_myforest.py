@@ -3,7 +3,7 @@ Testing for MyRandomForestClassifier
 
 '''
 
-from mysklearn.myclassifiers import MyRandomForrestClassifier
+from mysklearn.myclassifiers import MyRandomForrestClassifier, MyDecisionTreeClassifier
 
 X = [
     ["Senior", "Java", "no", "no"],
@@ -35,13 +35,29 @@ y_sol = ["False", "True", "True"]
 
 
 def test_myforest_fit():
-    N = 10
-    M = 4
-    F = 2
+    N = 20
+    M = 7
+    F = 3
+    
     interview_forest = MyRandomForrestClassifier(N,M,F)
     interview_forest.fit(X,y)
-    y_pred = interview_forest.predict(X_test)
-    assert y_pred == y_sol
+    assert len(interview_forest.trees) == M
+
+    preds = interview_forest.predict(X_test)
+    print(preds)
+
+    assert False
 
 def test_myforest_predict():
     assert False
+
+
+['Attribute', 'att1', 
+    ['Value', 'yes', 
+        ['Leaf', 'False', 2, 3]], 
+    ['Value', 'no', 
+        ['Leaf', 'True', 1, 8]], 
+    ['Value', 'R', ['Leaf', 'True', 1, 8]], 
+    ['Value', 'Java', ['Leaf', 'False', 1, 8]], 
+    ['Value', 'Python', ['Leaf', 'True', 1, 8]], 
+    ['Value', 'Junior', ['Leaf', 'False', 1, 8]]]
