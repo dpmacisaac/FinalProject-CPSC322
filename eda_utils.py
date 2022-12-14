@@ -137,3 +137,21 @@ def generate_scatter_plot(table, col_name, xl, yl, min_value=0):
     plt.xlabel(xl)
     plt.ylabel(yl)
     plt.show()
+
+def generate_pie_chart_from_column(table, col_name, data_labels, title):
+    l = table.get_column(col_name)
+    freq_dict = {item:0 for item in l}
+
+    for item in l:
+        freq_dict[item] += 1
+
+    freq_dict = dict(sorted(freq_dict.items(), key=lambda x: x[0], reverse=False))
+    vals = list(freq_dict.values())
+    
+    s = sum(vals)
+
+    labels = ["%s - %1.1f%%"%(data_labels[i], (vals[i] / s *100)) for i in range(len(data_labels))]
+    
+    plt.pie(vals, labels=labels)
+    plt.title(title)
+    plt.show()
