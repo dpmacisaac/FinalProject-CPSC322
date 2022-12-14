@@ -4,7 +4,7 @@ Description
 """
 import matplotlib.pyplot as plt
 from mysklearn.mypytable import MyPyTable
-
+import numpy as np
 
 def get_col_items_count(table, col_name):
     """Utility function to get the count of each item in a 
@@ -150,8 +150,34 @@ def generate_pie_chart_from_column(table, col_name, data_labels, title):
     
     s = sum(vals)
 
-    labels = ["%s - %1.1f%%"%(data_labels[i], (vals[i] / s *100)) for i in range(len(data_labels))]
+    labels = ["%s - %1.1f%%"%(data_labels[i], (vals[i] / s *100)) for i in range(len(data_labels)) if vals[i] > 0]
     
     plt.pie(vals, labels=labels)
     plt.title(title)
+    plt.show()
+
+def make_success_and_failure_chart(success_table, failure_table, col_name, min_val):
+    success_dict = get_col_items_count(success_table, col_name)
+    success_dict = {k:v for k, v in success_dict.items() if v > min_val} 
+    
+    failure_dict = get_col_items_count(failure_table, col_name)
+    failure_dict = {k:v for k, v in failure_dict.items() if k in success_dict.keys()}
+    success_dict = {k:v for k, v in success_dict.items() if k in failure_dict.keys()}
+    
+    success_dict = dict(sorted(success_dict.items(), key=lambda x: x[1], reverse=True))
+    failure_dict = dict(sorted(failure_dict.items(), key=lambda x: x[1], reverse=True))
+    
+    
+    plt.figure(figsize=(8, 5))
+    X_axis = np.arange(len(success_dict.keys()))
+    
+    plt.bar(X_axis - 0.2, list(success_dict.values()), 0.4, label='Success')
+    plt.bar(X_axis + 0.2, list(failure_dict.values()), 0.4, label='Failures')
+    
+    plt.xticks(range(len(success_dict)), success_dict.keys(), rotation=90)
+    
+    plt.xlabel("%ss with more than %i attempts"%(col_name, min_val))
+    plt.ylabel("Number of Climbs")
+    plt.title("Summit Success and Failure Count by %s"%(col_name))
+    plt.legend()
     plt.show()
