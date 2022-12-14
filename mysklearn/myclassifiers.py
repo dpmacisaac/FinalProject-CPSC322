@@ -647,7 +647,7 @@ class MyRandomForrestClassifier:
     It will build a 'forrest' of decision trees and use majority voting 
     among the best of the trees in order to make a prediction about a dataset.    
     """
-    def __init__(self, N=50, M=25, F=5, seed=0):
+    def __init__(self, N=50, M=25, F=5, seed=None):
         """Initializer for RandomForrestClassifier
         
         args: 
@@ -696,8 +696,8 @@ class MyRandomForrestClassifier:
         scores = []
         trees_indexes=[]
         for i in range(self.N):
-            curr_X, curr_X_test, curr_y, curr_y_test = myutils.bootstrap_sample(X_train, y_train, random_state=self.seed)
-            
+            curr_X, curr_X_test, curr_y, curr_y_test = myutils.bootstrap_sample(X_train, y_train, random_state=(self.seed+i))
+            np.random.seed(self.seed+i)
             rand_inds = sorted(list(np.random.choice(len(curr_X[0]), self.F, replace=False)))
             X = []
             for row in range(len(curr_X)):
