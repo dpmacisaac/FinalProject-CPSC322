@@ -127,7 +127,7 @@ def generate_freq_chart(table, col_name, xl, yl, min_value=0):
     temp_dict = {k:v for k, v in temp_dict.items() if v > min_value}
     make_freq_chart_from_dict(temp_dict, xl, yl)
 
-def generate_scatter_plot(table, col_name, xl, yl, min_value=0):
+def generate_scatter_plot(table, col_name, xl, yl, title, min_value=0):
     """Function to create a scatter plot based on column name
     
     """
@@ -136,6 +136,7 @@ def generate_scatter_plot(table, col_name, xl, yl, min_value=0):
     plt.scatter(temp_dict.keys(), temp_dict.values())
     plt.xlabel(xl)
     plt.ylabel(yl)
+    plt.title(title)
     plt.show()
 
 def generate_pie_chart_from_column(table, col_name, data_labels, title):
@@ -156,7 +157,7 @@ def generate_pie_chart_from_column(table, col_name, data_labels, title):
     plt.title(title)
     plt.show()
 
-def make_success_and_failure_chart(success_table, failure_table, col_name, min_val):
+def make_success_and_failure_chart(success_table, failure_table, col_name, min_val, fig_num):
     success_dict = get_col_items_count(success_table, col_name)
     success_dict = {k:v for k, v in success_dict.items() if v > min_val} 
     
@@ -176,8 +177,8 @@ def make_success_and_failure_chart(success_table, failure_table, col_name, min_v
     
     plt.xticks(range(len(success_dict)), success_dict.keys(), rotation=90)
     
-    plt.xlabel("%ss with more than %i attempts"%(col_name, min_val))
+    plt.xlabel("%s instances with more than %i attempts"%(col_name, min_val))
     plt.ylabel("Number of Climbs")
-    plt.title("Summit Success and Failure Count by %s"%(col_name))
+    plt.title("Fig %i: Summit Success and Failure Count by %s"%(fig_num, col_name))
     plt.legend()
     plt.show()
