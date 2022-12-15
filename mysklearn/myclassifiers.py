@@ -647,7 +647,7 @@ class MyRandomForrestClassifier:
     It will build a 'forrest' of decision trees and use majority voting 
     among the best of the trees in order to make a prediction about a dataset.    
     """
-    def __init__(self, N=50, M=25, F=5, seed=None):
+    def __init__(self, N=50, M=25, F=5, seed=0):
         """Initializer for RandomForrestClassifier
         
         args: 
